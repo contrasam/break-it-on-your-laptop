@@ -1,0 +1,32 @@
+x-writer: &writer
+  build: .
+  command: python writer.py
+  depends_on: [redis]
+  environment: &env
+    REDIS_HOST: redis
+    MODE: ${MODE:-lww}
+    KEYS: ${KEYS:-10}
+    THREADS: ${THREADS:-8}
+    DURATION: ${DURATION:-20}
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+
+  writer-a:
+    <<: *writer
+    environment: { <<: *env, WRITER_ID: A, SKEW_MS: "0" }
+  writer-b:
+    <<: *writer
+    environment: { <<: *env, WRITER_ID: B, SKEW_MS: "0" }
+  writer-c:
+    <<: *writer
+    environment: { <<: *env, WRITER_ID: C, SKEW_MS: "${SKEW_C:-0}" }
+
+  auditor:
+    build: .
+    command: python auditor.py
+    profiles: [audit]
+    depends_on: [redis]
+    environment: { REDIS_HOST: redis, DURATION: "${DURATION:-20}" }
