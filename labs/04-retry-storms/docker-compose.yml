@@ -1,0 +1,50 @@
+x-app: &app
+  build: .
+  environment: &env
+    RETRY: ${RETRY:-naive}
+    BUDGET: ${BUDGET:-0.1}
+    API_TIMEOUT_MS: ${API_TIMEOUT_MS:-300}
+    API_RETRIES: ${API_RETRIES:-2}
+
+services:
+  dep:
+    <<: *app
+    command: python dep.py
+    environment: { WORKERS: "${WORKERS:-4}", SERVICE_MS: "${SERVICE_MS:-20}", ERROR_RATE: "${ERROR_RATE:-0.02}" }
+
+  api1: &api
+    <<: *app
+    command: python api.py
+    depends_on: [dep]
+  api2: *api
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes: ["./nginx.conf:/etc/nginx/nginx.conf:ro"]
+    depends_on: [api1, api2]
+
+  loadgen:
+    <<: *app
+    command: python loadgen.py
+    depends_on: [nginx]
+    volumes: ["results:/results"]
+    environment:
+      <<: *env
+      RATE: ${RATE:-100}
+      DURATION: ${DURATION:-30}
+      CLIENT_TIMEOUT_MS: ${CLIENT_TIMEOUT_MS:-1000}
+      CLIENT_RETRIES: ${CLIENT_RETRIES:-2}
+      SLOW_AT: ${SLOW_AT:-5}
+      SLOW_FOR: ${SLOW_FOR:-5}
+      SLOW_MS: ${SLOW_MS:-100}
+      SERVICE_MS: ${SERVICE_MS:-20}
+
+  auditor:
+    <<: *app
+    command: python auditor.py
+    profiles: [audit]
+    volumes: ["results:/results"]
+    environment: { GRACE: "${GRACE:-10}" }
+
+volumes:
+  results:

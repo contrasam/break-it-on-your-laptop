@@ -20,6 +20,7 @@ The book that explains every lab: coming soon on [fbounded.com](https://fbounded
 | # | Lab | Breaks | Fix |
 | --- | --- | --- | --- |
 | 01 | [timestamps-lie](labs/01-timestamps-lie) | Last-write-wins under ties and 5 ms clock skew | Versioned compare-and-set |
+| 04 | [retry-storms](labs/04-retry-storms) | Naive retries keep a system down after a 5 s slowdown ends | Backoff, jitter and a retry budget |
 
 More labs land as chapters ship.
 
